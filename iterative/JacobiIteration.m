@@ -15,6 +15,7 @@ errNorm = resNorm/resNorm0;
 itr = 0;
 
 while errNorm > TOL
+x_old = x;
 for i = 1:N
     jSum = 0 ;      % Initialize the sum in the right hand side
     
@@ -24,7 +25,7 @@ for i = 1:N
     end
     for j = 1:N
         if i~=j
-            jSum = jSum + A(i,j)*x(j);
+            jSum = jSum + A(i,j)*x_old(j);
         end
     end
 
