@@ -1,13 +1,14 @@
 import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
 # Grid and problem parameters
 nx, ny = 50, 50
 N = nx * ny
 Lx, Ly = 1.0, 1.0
 dx, dy = Lx / (nx - 1), Ly / (ny - 1)
-D = 0.1  # Diffusivity
+D = 0.01  # Diffusivity
 timesteps = 100
 Tmax = 1.0
 t_eval = np.linspace(0, Tmax, timesteps)
@@ -71,31 +72,40 @@ U_rom = V_r @ A_sol  # Shape: (N, timesteps)
 
 
 
-# Pick time to visualize
-t_index = timesteps//2
-plt.figure(figsize=(18,5))
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
-plt.subplot(1,3,1)
-plt.title("Full order")
-plt.imshow(U[:, t_index].reshape((nx, ny)), origin='lower', cmap='jet')
-plt.colorbar(label="u", fraction=0.046, pad=0.04)
+# Set up images for the three subplots
+im0 = axes[0].imshow(U[:, 0].reshape((nx, ny)), origin='lower', cmap='jet', vmin=U.min(), vmax=U.max())
+axes[0].set_title("Full order")
+cbar0 = fig.colorbar(im0, ax=axes[0], fraction=0.046, pad=0.04)
+cbar0.set_label("u")
 
-plt.subplot(1,3,2)
-plt.title("Reduced Order")
-plt.imshow(U_rom[:, t_index].reshape((nx, ny)), origin='lower', cmap='jet')
-plt.colorbar(label="u (ROM)", fraction=0.046, pad=0.04)
+im1 = axes[1].imshow(U_rom[:, 0].reshape((nx, ny)), origin='lower', cmap='jet', vmin=U.min(), vmax=U.max())
+axes[1].set_title("Reduced Order")
+cbar1 = fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04)
+cbar1.set_label("u (ROM)")
 
-plt.subplot(1, 3, 3)
-error_field = U[:, t_index] - U_rom[:, t_index]
-plt.title("Pointwise Error (Full - Reduced)")
-plt.imshow(error_field.reshape((nx, ny)), origin='lower', cmap='jet')
-plt.colorbar(label="Error", fraction=0.046, pad=0.04)
-plt.xlabel("x")
-plt.ylabel("y")
+im2 = axes[2].imshow((U[:, 0] - U_rom[:, 0]).reshape((nx, ny)), origin='lower', cmap='jet')
+axes[2].set_title("Pointwise Error (Full - Reduced)")
+cbar2 = fig.colorbar(im2, ax=axes[2], fraction=0.046, pad=0.04)
+cbar2.set_label("Error")
 
-plt.suptitle(f"Solution at time = {t_eval[t_index]:.3f}", fontsize=12)
+suptitle = fig.suptitle(f"Solution at time = {t_eval[0]:.3f}", fontsize=14)
 
-plt.tight_layout()
+def update(frame):
+    im0.set_data(U[:, frame].reshape((nx, ny)))
+    im1.set_data(U_rom[:, frame].reshape((nx, ny)))
+    err_frame = (U[:, frame] - U_rom[:, frame]).reshape((nx, ny))
+    im2.set_data(err_frame)
+    vmax = np.max(np.abs(err_frame))
+    im2.set_clim(-vmax, vmax)
+    cbar2.set_ticks([-vmax, 0, vmax])
+    cbar2.set_ticklabels([f'{-vmax:.2e}', '0', f'{vmax:.2e}'])
+    suptitle.set_text(f"Solution at time = {t_eval[frame]:.3f}")
+    return im0, im1, im2
+
+ani = FuncAnimation(fig, update, frames=len(t_eval), interval=40, blit=False)
+plt.tight_layout(rect=[0,0,1,0.95])
 plt.show()
 
 # Error over time
